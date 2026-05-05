@@ -5,6 +5,15 @@
 type ParamName<Seg extends string> = Seg extends `${infer Name}:${string}` ? Name : Seg;
 
 /**
+ * Strips `:regex` constraints from every `{name:regex}` segment in a path,
+ * leaving the bare `{name}` form. Used so `navigate({ to })` accepts the
+ * cleaner unconstrained spelling alongside the literal configured pattern.
+ */
+type StripRegex<P extends string> = P extends `${infer Pre}{${infer Seg}}${infer Rest}`
+  ? `${Pre}{${ParamName<Seg>}}${StripRegex<Rest>}`
+  : P;
+
+/**
  * Extracts the union of param names declared in a path literal.
  * Recognizes both `{name}` and `{name:regex}` forms uniformly — the
  * single-arm template lets the recursion visit every brace segment instead
@@ -51,12 +60,13 @@ type NavigablePath<R extends readonly ConfigRoute<any, string>[]> = ResolvePath<
 
 /**
  * Single member of the structured-navigate union for one route pattern.
- * `params` is required only when the pattern declares at least one
- * placeholder; for paramless routes it's omitted entirely.
+ * `to` accepts either the literal configured pattern or its `:regex`-stripped
+ * form, since both produce the same URL after param substitution. `params`
+ * is required only when the pattern declares at least one placeholder.
  */
 type NavigateMember<P extends string> = [ParamNames<P>] extends [never]
   ? { to: P; search?: Record<string, string>; hash?: string }
-  : { to: P; params: ParamsOf<P>; search?: Record<string, string>; hash?: string };
+  : { to: P | StripRegex<P>; params: ParamsOf<P>; search?: Record<string, string>; hash?: string };
 
 /**
  * Discriminated union of all valid structured navigate arguments. Distributing

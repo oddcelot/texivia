@@ -101,6 +101,28 @@ describe('Router.navigate', () => {
     });
   });
 
+  it('accepts both the constrained and stripped pattern in the to field', () => {
+    const r = new Router<string>([
+      { path: '/{locale}/users/{id:\\d+}/profile', view: 'U' },
+    ]);
+    // Original configured pattern works.
+    r.navigate({
+      to: '/{locale}/users/{id:\\d+}/profile',
+      params: { locale: 'en', id: '13' },
+    });
+    // Stripped form also works (cleaner to write at the call site).
+    r.navigate({
+      to: '/{locale}/users/{id}/profile',
+      params: { locale: 'en', id: '13' },
+    });
+    // Wrong param shape still errors.
+    r.navigate({
+      to: '/{locale}/users/{id}/profile',
+      // @ts-expect-error 'foo' is not a declared param of this route
+      params: { locale: 'en', foo: 'x' },
+    });
+  });
+
   it('omits params for routes that have no placeholders', () => {
     const r = new Router<string>([
       { path: '/about', view: 'A' },
