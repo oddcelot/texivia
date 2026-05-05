@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
-import '../layouts/main-layout'
+import { mainLayout } from '../layouts/main-layout'
 
 @customElement('page-login')
 export class PageLogin extends LitElement {
@@ -9,7 +9,7 @@ export class PageLogin extends LitElement {
   @property() locale = 'en'
 
   render() {
-    const body = html`
+    return mainLayout(this.locale, html`
       <h1>Login</h1>
       <form class="login-form" method="POST" action="/${this.locale}/login">
         <label for="username">Username</label>
@@ -19,8 +19,7 @@ export class PageLogin extends LitElement {
         <button type="submit">Login</button>
         <p>Don't have an account? <a href="/${this.locale}/register">Register here</a></p>
       </form>
-    `
-    return html`<main-layout .locale=${this.locale} .body=${body}></main-layout>`
+    `)
   }
 }
 

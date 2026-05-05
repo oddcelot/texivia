@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
-import '../layouts/main-layout'
+import { mainLayout } from '../layouts/main-layout'
 
 @customElement('page-user-profile')
 export class PageUserProfile extends LitElement {
@@ -10,12 +10,11 @@ export class PageUserProfile extends LitElement {
   @property() id = ''
 
   render() {
-    const body = html`
+    return mainLayout(this.locale, html`
       <h1>User Profile</h1>
       <p>Locale: ${this.locale}</p>
       <p>User ID: ${this.id}</p>
-    `
-    return html`<main-layout .locale=${this.locale} .body=${body}></main-layout>`
+    `)
   }
 }
 
