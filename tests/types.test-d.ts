@@ -85,6 +85,35 @@ describe('Router.navigate', () => {
       hash: '#bio',
     });
   });
+
+  it('narrows params per-route via the discriminated to field', () => {
+    // {locale}/about needs only locale, not id+locale (which would be the
+    // case if TS picked the strictest params shape across all routes).
+    const r = new Router<string>([
+      { path: '/{locale}/about', view: 'A' },
+      { path: '/{locale}/users/{id:\\d+}/profile', view: 'U' },
+    ]);
+    r.navigate({ to: '/{locale}/about', params: { locale: 'en' } });
+    r.navigate({
+      to: '/{locale}/about',
+      // @ts-expect-error 'id' is not a param of /{locale}/about
+      params: { locale: 'en', id: '1' },
+    });
+  });
+
+  it('omits params for routes that have no placeholders', () => {
+    const r = new Router<string>([
+      { path: '/about', view: 'A' },
+      { path: '/users/{id}', view: 'U' },
+    ]);
+    // No params field needed for a paramless route.
+    r.navigate({ to: '/about' });
+    // Also fine to pass it as an empty object — but not required.
+    r.navigate({ to: '/about', search: { ref: 'home' } });
+    // Required for routes that do have placeholders.
+    // @ts-expect-error params is required when the route has placeholders
+    r.navigate({ to: '/users/{id}' });
+  });
 });
 
 describe('Handler match.params', () => {

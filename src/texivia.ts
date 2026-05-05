@@ -50,6 +50,25 @@ type RoutePath<R extends readonly ConfigRoute<any, string>[]> = Exclude<R[number
 type NavigablePath<R extends readonly ConfigRoute<any, string>[]> = ResolvePath<RoutePath<R>>;
 
 /**
+ * Single member of the structured-navigate union for one route pattern.
+ * `params` is required only when the pattern declares at least one
+ * placeholder; for paramless routes it's omitted entirely.
+ */
+type NavigateMember<P extends string> = [ParamNames<P>] extends [never]
+  ? { to: P; search?: Record<string, string>; hash?: string }
+  : { to: P; params: ParamsOf<P>; search?: Record<string, string>; hash?: string };
+
+/**
+ * Discriminated union of all valid structured navigate arguments. Distributing
+ * over `RoutePath<R>` makes `to` the discriminant — TypeScript narrows the
+ * arm based on the literal `to` value, so `params` is checked against the
+ * matching route's pattern, not the union of every route's params.
+ */
+type NavigateArg<R extends readonly ConfigRoute<any, string>[]> = {
+  [P in RoutePath<R>]: NavigateMember<P>;
+}[RoutePath<R>];
+
+/**
  * A hook function type that runs before navigation.
  *
  * @template T - The type of view associated with the route.
@@ -227,20 +246,22 @@ class Router<
    * Navigates programmatically to the given path. Accepts either a concrete
    * URL string typed against the configured routes, or a structured `{ to,
    * params }` form where `to` is a route pattern and `params` is typed by the
-   * pattern's named segments.
+   * pattern's named segments. For routes with no params, `params` is omitted.
    *
    * ```ts
    * router.navigate('/users/42/profile');
    * router.navigate({ to: '/users/{id:\\d+}/profile', params: { id: '42' } });
+   * router.navigate({ to: '/about' }); // no params on this route
    * ```
    */
-  async navigate<P extends RoutePath<R>>(
-    path: NavigablePath<R> | { to: P; params: ParamsOf<P>; search?: Record<string, string>; hash?: string },
-  ): Promise<MatchedRoute<T, P> | null> {
+  async navigate(path: NavigablePath<R> | NavigateArg<R>): Promise<MatchedRoute<T> | null> {
     const url = typeof path === 'string'
       ? new URL(path, window.location.origin)
-      : new URL(buildPath(path.to, path.params, path.search, path.hash), window.location.origin);
-    return this._navigate(url, true) as Promise<MatchedRoute<T, P> | null>;
+      : new URL(
+          buildPath(path.to, 'params' in path ? path.params : {}, path.search, path.hash),
+          window.location.origin,
+        );
+    return this._navigate(url, true);
   }
 
   /**
@@ -383,4 +404,5 @@ export {
   type ParamsOf,
   type RoutePath,
   type NavigablePath,
+  type NavigateArg,
 };
