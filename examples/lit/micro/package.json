@@ -1,0 +1,20 @@
+{
+  "name": "micro",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.app.json && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc -p tsconfig.app.json"
+  },
+  "dependencies": {
+    "lit": "^3.2.0",
+    "texivia-router": "file:../../.."
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "vite": "^6.3.1"
+  }
+}
