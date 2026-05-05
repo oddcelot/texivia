@@ -1,11 +1,13 @@
-import { LitElement, html } from 'lit'
-import { customElement, property } from 'lit/decorators.js'
+import { LitElement, html } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 
 @customElement('app-footer')
 export class AppFooter extends LitElement {
-  createRenderRoot() { return this }
+  createRenderRoot() {
+    return this;
+  }
 
-  @property() locale = 'en'
+  @property() locale = 'en';
 
   render() {
     return html`
@@ -17,6 +19,6 @@ export class AppFooter extends LitElement {
           <a href="/${this.locale}/contact">Contact</a>
         </nav>
       </footer>
-    `
+    `;
   }
 }

@@ -4,16 +4,16 @@ Minimal Lit 3 example using `texivia-router` for client-side routing. Demonstrat
 
 ## Routes
 
-| Path | View |
-|------|------|
-| `/` | Redirects to `/{locale}/` based on `navigator.language` |
-| `/{locale}/` | Landing |
-| `/{locale}/login` | Login |
-| `/{locale}/users/{id}/profile` | UserProfile |
-| `/{locale}/about` | About |
-| `/{locale}/imprint` | Imprint |
-| `/{locale}/contact` | Contact |
-| `*` | NotFound |
+| Path                           | View                                                    |
+| ------------------------------ | ------------------------------------------------------- |
+| `/`                            | Redirects to `/{locale}/` based on `navigator.language` |
+| `/{locale}/`                   | Landing                                                 |
+| `/{locale}/login`              | Login                                                   |
+| `/{locale}/users/{id}/profile` | UserProfile                                             |
+| `/{locale}/about`              | About                                                   |
+| `/{locale}/imprint`            | Imprint                                                 |
+| `/{locale}/contact`            | Contact                                                 |
+| `*`                            | NotFound                                                |
 
 ## How It Works
 
@@ -21,7 +21,7 @@ Minimal Lit 3 example using `texivia-router` for client-side routing. Demonstrat
 
 ```ts
 // src/router.ts
-export type View = (params: Record<string, string>) => TemplateResult
+export type View = (params: Record<string, string>) => TemplateResult;
 
 export const router = new Router<View>([
   { path: '/', handler: () => `/${navigator.language}/` },
@@ -29,7 +29,7 @@ export const router = new Router<View>([
   { path: '/{locale}/users/{id:\\d+}/profile', view: renderUserProfile },
   // ...
   { path: '*', view: renderNotFound },
-])
+]);
 ```
 
 `<app-shell>` is the root LitElement. It listens for the `texivia` event, swaps the current view, and re-renders:
@@ -38,31 +38,33 @@ export const router = new Router<View>([
 // src/app-shell.ts
 @customElement('app-shell')
 export class AppShell extends LitElement {
-  createRenderRoot() { return this } // light DOM
+  createRenderRoot() {
+    return this;
+  } // light DOM
 
-  @state() private view: View = renderLanding
-  @state() private params: Record<string, string> = { locale: 'en' }
+  @state() private view: View = renderLanding;
+  @state() private params: Record<string, string> = { locale: 'en' };
 
   private onNavigate = (e: Event) => {
-    const detail = (e as CustomEvent).detail
-    if (detail?.view) this.view = detail.view
-    this.params = detail?.params ?? {}
-  }
+    const detail = (e as CustomEvent).detail;
+    if (detail?.view) this.view = detail.view;
+    this.params = detail?.params ?? {};
+  };
 
   connectedCallback() {
-    super.connectedCallback()
-    document.addEventListener('texivia', this.onNavigate)
-    router.start()
+    super.connectedCallback();
+    document.addEventListener('texivia', this.onNavigate);
+    router.start();
   }
 
   disconnectedCallback() {
-    super.disconnectedCallback()
-    document.removeEventListener('texivia', this.onNavigate)
-    router.stop()
+    super.disconnectedCallback();
+    document.removeEventListener('texivia', this.onNavigate);
+    router.stop();
   }
 
   render() {
-    return this.view(this.params)
+    return this.view(this.params);
   }
 }
 ```
