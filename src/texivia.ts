@@ -25,17 +25,34 @@ type ParamNames<P extends string> = P extends `${string}{${infer Seg}}${infer Re
   : never;
 
 /**
+ * Captures the `:regex` constraint declared for a specific param name in a
+ * path literal, or `null` if the param has no constraint.
+ */
+type RegexFor<P extends string, K extends string> = P extends `${string}{${K}:${infer Rx}}${string}`
+  ? Rx
+  : null;
+
+/**
+ * Maps a `:regex` constraint to a TypeScript value type that approximates it
+ * at compile time. `\d+` and `[0-9]+` map to `` `${number}` `` so callers
+ * can't pass `'a123b'` to a digit-constrained param. Unknown patterns fall
+ * back to `string` — the runtime regex is still authoritative.
+ */
+type ParamValue<Rx extends string | null> = Rx extends '\\d+' | '[0-9]+' ? `${number}` : string;
+
+/**
  * Object type whose keys are the params declared in a path literal.
  * - For the unrefined `string` default, falls back to `Record<string, string>`
  *   so legacy callers see no narrowing.
  * - For a literal pattern with no params, resolves to `Record<string, never>`.
- * - Otherwise yields a typed object keyed by the declared param names.
+ * - Otherwise each param's value type reflects its `:regex` constraint where
+ *   recognized (currently `\d+`).
  */
 type ParamsOf<P extends string> = string extends P
   ? Record<string, string>
   : [ParamNames<P>] extends [never]
     ? Record<string, never>
-    : { readonly [K in ParamNames<P>]: string };
+    : { readonly [K in ParamNames<P>]: ParamValue<RegexFor<P, K>> };
 
 /**
  * Resolves a path pattern to the union of concrete URL strings that match it,

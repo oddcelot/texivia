@@ -6,14 +6,22 @@ describe('ParamsOf', () => {
     expectTypeOf<ParamsOf<'/users/{id}/profile'>>().toEqualTypeOf<{ readonly id: string }>();
   });
 
-  it('extracts a regex-constrained param', () => {
-    expectTypeOf<ParamsOf<'/users/{id:\\d+}/profile'>>().toEqualTypeOf<{ readonly id: string }>();
+  it('narrows \\d+-constrained params to template-number strings', () => {
+    expectTypeOf<ParamsOf<'/users/{id:\\d+}/profile'>>().toEqualTypeOf<{ readonly id: `${number}` }>();
   });
 
-  it('extracts multiple params', () => {
+  it('treats [0-9]+ the same as \\d+', () => {
+    expectTypeOf<ParamsOf<'/users/{id:[0-9]+}'>>().toEqualTypeOf<{ readonly id: `${number}` }>();
+  });
+
+  it('falls back to string for unrecognized regex constraints', () => {
+    expectTypeOf<ParamsOf<'/posts/{slug:[a-z-]+}'>>().toEqualTypeOf<{ readonly slug: string }>();
+  });
+
+  it('extracts multiple params with mixed constraints', () => {
     expectTypeOf<ParamsOf<'/{locale}/users/{id:\\d+}/profile'>>().toEqualTypeOf<{
       readonly locale: string;
-      readonly id: string;
+      readonly id: `${number}`;
     }>();
   });
 
@@ -120,6 +128,16 @@ describe('Router.navigate', () => {
       to: '/{locale}/users/{id}/profile',
       // @ts-expect-error 'foo' is not a declared param of this route
       params: { locale: 'en', foo: 'x' },
+    });
+  });
+
+  it('rejects literal param values that violate the route regex', () => {
+    const r = new Router<string>([{ path: '/users/{id:\\d+}/profile', view: 'U' }]);
+    r.navigate({ to: '/users/{id}/profile', params: { id: '13' } });
+    r.navigate({
+      to: '/users/{id}/profile',
+      // @ts-expect-error 'a123b' is not a numeric string
+      params: { id: 'a123b' },
     });
   });
 
