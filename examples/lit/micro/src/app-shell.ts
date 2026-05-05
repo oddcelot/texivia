@@ -20,14 +20,17 @@ export class AppShell extends LitElement {
 
   connectedCallback() {
     super.connectedCallback()
-    router.start()
+    // Listener must precede start(): for routes with no handler, _navigate
+    // dispatches the texivia event synchronously inside start(), so attaching
+    // afterwards loses the initial event on deep-link loads.
     document.addEventListener('texivia', this.onNavigate)
+    router.start()
   }
 
   disconnectedCallback() {
     super.disconnectedCallback()
-    router.stop()
     document.removeEventListener('texivia', this.onNavigate)
+    router.stop()
   }
 
   render() {
