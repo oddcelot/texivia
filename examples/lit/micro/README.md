@@ -73,7 +73,7 @@ export class AppShell extends LitElement {
 
 **Listener before `start()`.** Routes without a handler complete `_navigate` synchronously inside `router.start()` and dispatch the `texivia` event before control returns. Attach the listener first, then call `router.start()`, otherwise the initial event is missed on direct deep-link loads.
 
-**Layout body as a template prop.** Light DOM ignores `<slot>` (slots only project in shadow DOM). Layout components take their body as a TemplateResult prop instead — `<main-layout .locale=${locale} .body=${html\`...\`}>`. This mirrors Svelte's named-snippet pattern.
+**Layouts as plain template functions.** `mainLayout(locale, body)` is a function returning a `TemplateResult`, not a custom element. Layouts have no state or behavior, so wrapping them in a `LitElement` only adds ceremony — and forcing children through a custom element means dealing with `<slot>` (which doesn't project in light DOM). A function is shorter, has no render root, and composes naturally inside `html\`...\``.
 
 ## Setup
 
