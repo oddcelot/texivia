@@ -1,4 +1,4 @@
-import { LitElement, html } from 'lit'
+import { LitElement, html, nothing, type TemplateResult } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import '../components/app-header'
 import '../components/app-footer'
@@ -8,11 +8,12 @@ export class MainLayout extends LitElement {
   createRenderRoot() { return this }
 
   @property() locale = 'en'
+  @property({ attribute: false }) body: TemplateResult | typeof nothing = nothing
 
   render() {
     return html`
       <app-header .locale=${this.locale}></app-header>
-      <main><slot></slot></main>
+      <main>${this.body}</main>
       <app-footer .locale=${this.locale}></app-footer>
     `
   }

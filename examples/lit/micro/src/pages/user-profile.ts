@@ -10,13 +10,12 @@ export class PageUserProfile extends LitElement {
   @property() id = ''
 
   render() {
-    return html`
-      <main-layout .locale=${this.locale}>
-        <h1>User Profile</h1>
-        <p>Locale: ${this.locale}</p>
-        <p>User ID: ${this.id}</p>
-      </main-layout>
+    const body = html`
+      <h1>User Profile</h1>
+      <p>Locale: ${this.locale}</p>
+      <p>User ID: ${this.id}</p>
     `
+    return html`<main-layout .locale=${this.locale} .body=${body}></main-layout>`
   }
 }
 

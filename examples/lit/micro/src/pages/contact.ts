@@ -9,13 +9,12 @@ export class PageContact extends LitElement {
   @property() locale = 'en'
 
   render() {
-    return html`
-      <main-layout .locale=${this.locale}>
-        <h1>Contact</h1>
-        <p>Have questions or feedback? Reach out to us.</p>
-        <p>Email: <a href="mailto:example@texivia.dev">example@texivia.dev</a></p>
-      </main-layout>
+    const body = html`
+      <h1>Contact</h1>
+      <p>Have questions or feedback? Reach out to us.</p>
+      <p>Email: <a href="mailto:example@texivia.dev">example@texivia.dev</a></p>
     `
+    return html`<main-layout .locale=${this.locale} .body=${body}></main-layout>`
   }
 }
 

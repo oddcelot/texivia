@@ -9,16 +9,15 @@ export class PageLanding extends LitElement {
   @property() locale = 'en'
 
   render() {
-    return html`
-      <main-layout .locale=${this.locale}>
-        <h1>Welcome to Texivia</h1>
-        <p>Your one-stop solution for all your text processing needs.</p>
-        <p>Locale: ${this.locale}</p>
-        <p>Explore our features and services tailored just for you.</p>
-        <p>Get started by signing up or logging in!</p>
-        <p>Already have an account? <a href="/${this.locale}/login">Login here</a></p>
-      </main-layout>
+    const body = html`
+      <h1>Welcome to Texivia</h1>
+      <p>Your one-stop solution for all your text processing needs.</p>
+      <p>Locale: ${this.locale}</p>
+      <p>Explore our features and services tailored just for you.</p>
+      <p>Get started by signing up or logging in!</p>
+      <p>Already have an account? <a href="/${this.locale}/login">Login here</a></p>
     `
+    return html`<main-layout .locale=${this.locale} .body=${body}></main-layout>`
   }
 }
 

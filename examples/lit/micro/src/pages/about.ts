@@ -9,13 +9,12 @@ export class PageAbout extends LitElement {
   @property() locale = 'en'
 
   render() {
-    return html`
-      <main-layout .locale=${this.locale}>
-        <h1>About</h1>
-        <p>Texivia is a lightweight, framework-agnostic router for single-page applications.</p>
-        <p>Built with TypeScript, it compiles all routes into a single regex for fast O(1) matching.</p>
-      </main-layout>
+    const body = html`
+      <h1>About</h1>
+      <p>Texivia is a lightweight, framework-agnostic router for single-page applications.</p>
+      <p>Built with TypeScript, it compiles all routes into a single regex for fast O(1) matching.</p>
     `
+    return html`<main-layout .locale=${this.locale} .body=${body}></main-layout>`
   }
 }
 
