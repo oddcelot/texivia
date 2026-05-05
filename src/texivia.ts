@@ -1,12 +1,19 @@
 /**
- * Extracts the union of param names declared in a path literal.
- * Recognizes both `{name}` and `{name:regex}` forms.
+ * Extracts the bare param name from a brace segment, dropping any `:regex`
+ * constraint after the colon.
  */
-type ParamNames<P extends string> = P extends `${string}{${infer Name}:${string}}${infer Rest}`
-  ? Name | ParamNames<Rest>
-  : P extends `${string}{${infer Name}}${infer Rest}`
-    ? Name | ParamNames<Rest>
-    : never;
+type ParamName<Seg extends string> = Seg extends `${infer Name}:${string}` ? Name : Seg;
+
+/**
+ * Extracts the union of param names declared in a path literal.
+ * Recognizes both `{name}` and `{name:regex}` forms uniformly — the
+ * single-arm template lets the recursion visit every brace segment instead
+ * of greedy-matching past unconstrained params on the way to a constrained
+ * one.
+ */
+type ParamNames<P extends string> = P extends `${string}{${infer Seg}}${infer Rest}`
+  ? ParamName<Seg> | ParamNames<Rest>
+  : never;
 
 /**
  * Object type whose keys are the params declared in a path literal.
@@ -26,13 +33,11 @@ type ParamsOf<P extends string> = string extends P
  * e.g. `/users/{id:\\d+}/profile` becomes `` `/users/${string}/profile` ``.
  * The wildcard `*` resolves to `string`.
  */
-type ResolvePath<P extends string> = P extends `${infer Pre}{${string}:${string}}${infer Rest}`
+type ResolvePath<P extends string> = P extends `${infer Pre}{${string}}${infer Rest}`
   ? `${Pre}${string}${ResolvePath<Rest>}`
-  : P extends `${infer Pre}{${string}}${infer Rest}`
-    ? `${Pre}${string}${ResolvePath<Rest>}`
-    : P extends '*'
-      ? string
-      : P;
+  : P extends '*'
+    ? string
+    : P;
 
 /**
  * Union of literal route paths in a config tuple, excluding the wildcard.
@@ -350,8 +355,28 @@ class Router<
   }
 }
 
+/**
+ * Factory that lets callers specify the view type `T` while still letting
+ * TypeScript infer the literal route tuple `R`. The two-step call is needed
+ * because TS doesn't currently allow partial explicit type-argument lists —
+ * passing `T` to `new Router<T>(...)` defeats inference of the second
+ * generic and falls back to a loose `readonly ConfigRoute<T, string>[]`.
+ *
+ * ```ts
+ * const router = createRouter<View>()([
+ *   { path: '/about', view: AboutView },
+ *   { path: '/users/{id:\\d+}', view: UserView },
+ * ]);
+ * router.navigate({ to: '/users/{id:\\d+}', params: { id: '42' } });
+ * ```
+ */
+function createRouter<T>() {
+  return <const R extends readonly ConfigRoute<T, string>[]>(routes: R) => new Router<T, R>(routes);
+}
+
 export {
   Router,
+  createRouter,
   type ConfigRoute,
   type MatchedRoute,
   type HookType,

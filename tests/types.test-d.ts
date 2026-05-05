@@ -1,5 +1,5 @@
 import { describe, it, expectTypeOf } from 'vitest';
-import { Router, type ParamsOf, type RoutePath, type MatchedRoute } from '../src/texivia';
+import { Router, createRouter, type ParamsOf, type RoutePath, type MatchedRoute } from '../src/texivia';
 
 describe('ParamsOf', () => {
   it('extracts a single param', () => {
@@ -134,5 +134,29 @@ describe('RoutePath', () => {
 describe('MatchedRoute default', () => {
   it('keeps the loose Record<string, string> shape for the bare type', () => {
     expectTypeOf<MatchedRoute<string>['params']>().toEqualTypeOf<Record<string, string>>();
+  });
+});
+
+describe('createRouter factory', () => {
+  it('preserves literal path inference when T is specified', () => {
+    type View = string;
+    const router = createRouter<View>()([
+      { path: '/about', view: 'A' },
+      { path: '/users/{id:\\d+}/profile', view: 'B' },
+    ]);
+
+    // Concrete URL form is type-checked against the configured patterns.
+    router.navigate('/about');
+    router.navigate('/users/42/profile');
+    // @ts-expect-error '/typo' is not a configured route shape
+    router.navigate('/typo');
+
+    // Structured form keeps the typed-params benefit.
+    router.navigate({ to: '/users/{id:\\d+}/profile', params: { id: '42' } });
+    router.navigate({
+      to: '/users/{id:\\d+}/profile',
+      // @ts-expect-error 'wrong' is not a declared param of this route
+      params: { wrong: '42' },
+    });
   });
 });
