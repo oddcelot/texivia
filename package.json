@@ -43,7 +43,9 @@
     "single-page-app",
     "svelte",
     "vue",
-    "react"
+    "react",
+    "lit",
+    "web-components"
   ],
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",
