@@ -22,6 +22,7 @@
     "build": "vite build && tsc --emitDeclarationOnly",
     "dev": "vite",
     "test": "vitest",
+    "test:types": "vitest --typecheck --run tests/types.test-d.ts",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"
   },
