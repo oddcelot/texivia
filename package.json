@@ -19,7 +19,7 @@
     }
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && tsc --emitDeclarationOnly",
     "dev": "vite",
     "test": "vitest",
     "lint": "eslint src --ext .ts",
