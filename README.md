@@ -26,6 +26,7 @@ npm install texivia-router
 | Svelte  |       – | – | ✓ | – | **✓** |
 | React   |       ✓ | – | ✓ | ✓ | **✓** |
 | Vue     |       – | ✓ | ✓ | – | **✓** |
+| Lit     |       – | – | – | – | **✓** |
 | Angular |       – | – | ✓ | – | **✓** |
 | Vanilla |       – | – | ✓ | – | **✓** |
 
@@ -130,6 +131,98 @@ Texivia doesn't need a nested routing concept. Use your framework's composition 
 ```
 
 Layouts are components, not router config. This keeps the router simple and your layouts flexible.
+
+## Lit 3
+
+Type the router with a render-function `View` so each route's `view` is a `(params) => TemplateResult`. A single `<app-shell>` LitElement owns the navigation listener and re-renders by swapping the current view:
+
+```typescript
+// src/router.ts
+import { Router } from 'texivia-router';
+import type { TemplateResult } from 'lit';
+import { renderLanding } from './pages/landing';
+import { renderUserProfile } from './pages/user-profile';
+import { renderNotFound } from './pages/not-found';
+
+export type View = (params: Record<string, string>) => TemplateResult;
+
+export const router = new Router<View>([
+  { path: '/', view: renderLanding },
+  { path: '/users/{id:\\d+}', view: renderUserProfile },
+  { path: '*', view: renderNotFound },
+]);
+```
+
+```typescript
+// src/app-shell.ts
+import { LitElement } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { router, type View } from './router';
+import { renderLanding } from './pages/landing';
+
+@customElement('app-shell')
+export class AppShell extends LitElement {
+  // Light DOM: lets global CSS apply and lets <a> clicks bubble to document.
+  createRenderRoot() { return this; }
+
+  @state() private view: View = renderLanding;
+  @state() private params: Record<string, string> = {};
+
+  private onNavigate = (e: Event) => {
+    const detail = (e as CustomEvent).detail;
+    if (detail?.view) this.view = detail.view;
+    this.params = detail?.params ?? {};
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    // Attach listener BEFORE start() — routes without a handler dispatch
+    // synchronously, so a late listener misses the initial event on deep links.
+    document.addEventListener('texivia', this.onNavigate);
+    router.start();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener('texivia', this.onNavigate);
+    router.stop();
+  }
+
+  render() {
+    return this.view(this.params);
+  }
+}
+```
+
+Each page exports a LitElement and a render fn that the router map references:
+
+```typescript
+// src/pages/landing.ts
+import { LitElement, html } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+
+@customElement('page-landing')
+export class PageLanding extends LitElement {
+  createRenderRoot() { return this; }
+  @property() locale = 'en';
+
+  render() {
+    return html`<h1>Welcome</h1><p>Locale: ${this.locale}</p>`;
+  }
+}
+
+export const renderLanding = (p: Record<string, string>) =>
+  html`<page-landing .locale=${p.locale}></page-landing>`;
+```
+
+For programmatic navigation, import the router from anywhere:
+
+```typescript
+import { router } from './router';
+router.navigate('/dashboard');
+```
+
+Plain `<a>` tags inside Lit templates are intercepted automatically — no `<Link>` wrapper needed. See [`examples/lit/micro`](examples/lit/micro) for a complete example with layouts, parameterized routes, and a 404 fallback.
 
 ## Vue 3
 
