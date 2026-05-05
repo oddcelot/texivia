@@ -1,42 +1,91 @@
 /**
+ * Extracts the union of param names declared in a path literal.
+ * Recognizes both `{name}` and `{name:regex}` forms.
+ */
+type ParamNames<P extends string> = P extends `${string}{${infer Name}:${string}}${infer Rest}`
+  ? Name | ParamNames<Rest>
+  : P extends `${string}{${infer Name}}${infer Rest}`
+    ? Name | ParamNames<Rest>
+    : never;
+
+/**
+ * Object type whose keys are the params declared in a path literal.
+ * - For the unrefined `string` default, falls back to `Record<string, string>`
+ *   so legacy callers see no narrowing.
+ * - For a literal pattern with no params, resolves to `Record<string, never>`.
+ * - Otherwise yields a typed object keyed by the declared param names.
+ */
+type ParamsOf<P extends string> = string extends P
+  ? Record<string, string>
+  : [ParamNames<P>] extends [never]
+    ? Record<string, never>
+    : { readonly [K in ParamNames<P>]: string };
+
+/**
+ * Resolves a path pattern to the union of concrete URL strings that match it,
+ * e.g. `/users/{id:\\d+}/profile` becomes `` `/users/${string}/profile` ``.
+ * The wildcard `*` resolves to `string`.
+ */
+type ResolvePath<P extends string> = P extends `${infer Pre}{${string}:${string}}${infer Rest}`
+  ? `${Pre}${string}${ResolvePath<Rest>}`
+  : P extends `${infer Pre}{${string}}${infer Rest}`
+    ? `${Pre}${string}${ResolvePath<Rest>}`
+    : P extends '*'
+      ? string
+      : P;
+
+/**
+ * Union of literal route paths in a config tuple, excluding the wildcard.
+ */
+type RoutePath<R extends readonly ConfigRoute<any, string>[]> = Exclude<R[number]['path'], '*'>;
+
+/**
+ * Union of concrete URL strings accepted by `navigate()` for the given config.
+ */
+type NavigablePath<R extends readonly ConfigRoute<any, string>[]> = ResolvePath<RoutePath<R>>;
+
+/**
  * A hook function type that runs before navigation.
  *
  * @template T - The type of view associated with the route.
+ * @template P - The literal path pattern, used to type `match.params`.
  * @param match - The matched route object.
  * @returns A boolean, string, or a Promise resolving to one of these types.
  *   - If `false`, navigation is cancelled.
  *   - If a `string`, navigation is redirected to the given path.
  *   - If `true`, navigation proceeds as normal.
  */
-type HookType<T> = (match: MatchedRoute<T>) => boolean | string | Promise<boolean | string>
+type HookType<T, P extends string = string> = (match: MatchedRoute<T, P>) => boolean | string | Promise<boolean | string>
 
 /**
  * Configuration for a route in the router.
  * @template T The type of view associated with routes.
+ * @template P The literal path pattern. Inferred from the `path` field; carries
+ *   param names through to `handler`'s `match.params`.
  */
-type ConfigRoute<T> = {
-  path: string;
+type ConfigRoute<T, P extends string = string> = {
+  path: P;
   view?: T;
   redirect?: string;
-  handler?: HookType<T>;
+  handler?: HookType<T, P>;
 }
 
 /**
  * Internal representation of a compiled route with regex for parameter matching.
- * @template T The type of view associated with routes.
  */
-type CompiledRoute<T> = ConfigRoute<T> & {
+type CompiledRoute<T, P extends string = string> = ConfigRoute<T, P> & {
   paramRegex: RegExp | null;
 }
 
 /**
  * Representation of a matched route with extracted parameters.
  * @template T The type of view associated with routes.
+ * @template P The literal path pattern, used to type `params`.
  */
-type MatchedRoute<T> = {
+type MatchedRoute<T, P extends string = string> = {
   readonly path: string;
   view?: T;
-  readonly params: Record<string, string>;
+  readonly params: ParamsOf<P>;
   readonly search: Record<string, string>;
   readonly hash: string;
 }
@@ -47,12 +96,40 @@ type MatchedRoute<T> = {
 const MAX_REDIRECTS = 10;
 
 /**
+ * Substitutes named params into a path pattern and appends search/hash. Used
+ * by the structured form of `Router.navigate({ to, params, ... })`.
+ */
+function buildPath(
+  pattern: string,
+  params: Record<string, string>,
+  search?: Record<string, string>,
+  hash?: string,
+): string {
+  let path = pattern.replace(/\{([a-zA-Z_$][a-zA-Z0-9_$]*)(?::[^}]+)?\}/g, (_, name) => {
+    const value = params[name];
+    if (value === undefined) throw new Error(`Texivia: missing param '${name}' for path '${pattern}'`);
+    return encodeURIComponent(value);
+  });
+  const qs = search ? new URLSearchParams(search).toString() : '';
+  if (qs) path += '?' + qs;
+  if (hash) path += hash.startsWith('#') ? hash : '#' + hash;
+  return path;
+}
+
+/**
  * Lightweight, framework-agnostic router for single-page applications.
  * Compiles all routes into a single regex for O(1) matching.
  *
  * @template T The type of view to be used with the router.
+ * @template R The literal type of the route config tuple. Inferred from the
+ *   constructor argument via the `const` modifier, so `router.navigate(...)`
+ *   autocompletes from the actual route paths without callers needing
+ *   `as const`.
  */
-class Router<T = unknown> {
+class Router<
+  T = unknown,
+  const R extends readonly ConfigRoute<T, string>[] = readonly ConfigRoute<T, string>[],
+> {
   private segmentRegex = /(?:\/([^\/{}]+)|\/\{([a-zA-Z_$][a-zA-Z0-9_$]*)(?::([^/]+))?\}|(\/))/g;
   private static readonly EVENT_NAME = 'texivia';
   private readonly _mapping: RegExp | null;
@@ -66,7 +143,7 @@ class Router<T = unknown> {
    * @param config Array of route configurations.
    * @throws {Error} If a route path is malformed.
    */
-  constructor(config: Array<ConfigRoute<T>> = []) {
+  constructor(config: R = [] as unknown as R) {
     const mappings: string[] = [];
 
     let wildcard;
@@ -142,12 +219,23 @@ class Router<T = unknown> {
   }
 
   /**
-   * Navigates programmatically to the given path.
-   * @param path - The path to navigate to (e.g. '/recipe/42' or '/search?q=pasta#results').
-   * @returns The matched route, or null if no route matches or navigation was cancelled.
+   * Navigates programmatically to the given path. Accepts either a concrete
+   * URL string typed against the configured routes, or a structured `{ to,
+   * params }` form where `to` is a route pattern and `params` is typed by the
+   * pattern's named segments.
+   *
+   * ```ts
+   * router.navigate('/users/42/profile');
+   * router.navigate({ to: '/users/{id:\\d+}/profile', params: { id: '42' } });
+   * ```
    */
-  async navigate(path: string): Promise<MatchedRoute<T> | null> {
-    return this._navigate(new URL(path, window.location.origin), true);
+  async navigate<P extends RoutePath<R>>(
+    path: NavigablePath<R> | { to: P; params: ParamsOf<P>; search?: Record<string, string>; hash?: string },
+  ): Promise<MatchedRoute<T, P> | null> {
+    const url = typeof path === 'string'
+      ? new URL(path, window.location.origin)
+      : new URL(buildPath(path.to, path.params, path.search, path.hash), window.location.origin);
+    return this._navigate(url, true) as Promise<MatchedRoute<T, P> | null>;
   }
 
   /**
@@ -262,4 +350,12 @@ class Router<T = unknown> {
   }
 }
 
-export { Router, type ConfigRoute, type MatchedRoute, type HookType };
+export {
+  Router,
+  type ConfigRoute,
+  type MatchedRoute,
+  type HookType,
+  type ParamsOf,
+  type RoutePath,
+  type NavigablePath,
+};
