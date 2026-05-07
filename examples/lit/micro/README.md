@@ -24,7 +24,7 @@ Minimal Lit 3 example using `texivia-router` for client-side routing. Demonstrat
 export type View = (params: Record<string, string>) => TemplateResult;
 
 export const router = new Router<View>([
-  { path: '/', handler: () => `/${navigator.language}/` },
+  { path: '/', handler: () => `/${navigator.language.split('-')[0]}/` },
   { path: '/{locale}/', view: renderLanding },
   { path: '/{locale}/users/{id:\\d+}/profile', view: renderUserProfile },
   // ...
@@ -43,7 +43,9 @@ export class AppShell extends LitElement {
   } // light DOM
 
   @state() private view: View = renderLanding;
-  @state() private params: Record<string, string> = { locale: 'en' };
+  @state() private params: Record<string, string> = {
+    locale: navigator.language.split('-')[0],
+  };
 
   private onNavigate = (e: Event) => {
     const detail = (e as CustomEvent).detail;
@@ -71,7 +73,7 @@ export class AppShell extends LitElement {
 
 ## Lit-specific notes
 
-**Light DOM (`createRenderRoot() { return this }`).** The example renders in light DOM so global `app.css` applies and `<a>` clicks bubble to `document` where Texivia intercepts them. If you prefer shadow DOM, you'll need to ship styles per-component via `static styles` and rely on `composedPath` for click interception (Texivia already handles standard click bubbling, so anchor clicks must reach `document`).
+**Light DOM (`createRenderRoot() { return this }`).** Composed click events bubble out of shadow DOM fine — but `event.target` is retargeted to the shadow host. Texivia's interceptor calls `event.target.closest('a')`, which then walks up from `<app-shell>` instead of from the actual anchor and finds nothing. Light DOM keeps the clicked `<a>` as the literal `event.target`, so `closest('a')` resolves it. Light DOM also lets global `app.css` apply without `static styles`. Shadow DOM is workable only if you fork the router to read `event.composedPath()`.
 
 **Listener before `start()`.** Routes without a handler complete `_navigate` synchronously inside `router.start()` and dispatch the `texivia` event before control returns. Attach the listener first, then call `router.start()`, otherwise the initial event is missed on direct deep-link loads.
 
