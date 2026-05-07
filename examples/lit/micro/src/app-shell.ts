@@ -5,8 +5,9 @@ import { renderLanding } from './pages/landing';
 
 @customElement('app-shell')
 export class AppShell extends LitElement {
-  // Light DOM: lets global app.css apply and lets <a> clicks bubble to
-  // document so Texivia's click interception sees them.
+  // Light DOM keeps the clicked <a> as event.target so the router's
+  // document-level closest('a') resolves it; Shadow DOM would retarget
+  // target to <app-shell>. Also lets global app.css apply.
   createRenderRoot() {
     return this;
   }
