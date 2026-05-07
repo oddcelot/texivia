@@ -15,7 +15,7 @@ export class PageLogin extends LitElement {
       this.locale,
       html`
         <h1>Login</h1>
-        <form class="login-form" method="POST" action="/${this.locale}/login">
+        <form class="login-form" @submit=${(e: Event) => e.preventDefault()}>
           <label for="username">Username</label>
           <input type="text" id="username" name="username" required />
           <label for="password">Password</label>
