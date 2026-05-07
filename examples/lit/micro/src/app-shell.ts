@@ -13,7 +13,9 @@ export class AppShell extends LitElement {
   }
 
   @state() private view: View = renderLanding;
-  @state() private params: Record<string, string> = { locale: 'en' };
+  @state() private params: Record<string, string> = {
+    locale: navigator.language.split('-')[0],
+  };
 
   private onNavigate = (event: Event) => {
     const detail = (event as CustomEvent).detail;
