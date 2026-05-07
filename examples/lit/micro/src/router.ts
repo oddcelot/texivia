@@ -11,7 +11,7 @@ import { renderNotFound } from './pages/not-found';
 export type View = (params: Record<string, string>) => TemplateResult;
 
 export const router = new Router<View>([
-  { path: '/', handler: () => `/${navigator.language}/` },
+  { path: '/', handler: () => `/${navigator.language.split('-')[0]}/` },
   { path: '/{locale}/', view: renderLanding },
   { path: '/{locale}/login', view: renderLogin },
   { path: '/{locale}/users/{id:\\d+}/profile', view: renderUserProfile },
