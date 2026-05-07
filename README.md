@@ -162,11 +162,15 @@ import { renderLanding } from './pages/landing';
 
 @customElement('app-shell')
 export class AppShell extends LitElement {
-  // Light DOM: lets global CSS apply and lets <a> clicks bubble to document.
+  // Light DOM keeps the clicked <a> as event.target so the router's
+  // document-level closest('a') resolves it; Shadow DOM would retarget
+  // target to the host. Also lets global CSS apply.
   createRenderRoot() { return this; }
 
   @state() private view: View = renderLanding;
-  @state() private params: Record<string, string> = {};
+  @state() private params: Record<string, string> = {
+    locale: navigator.language.split('-')[0],
+  };
 
   private onNavigate = (e: Event) => {
     const detail = (e as CustomEvent).detail;
@@ -222,7 +226,7 @@ import { router } from './router';
 router.navigate('/dashboard');
 ```
 
-Plain `<a>` tags inside Lit templates are intercepted automatically — no `<Link>` wrapper needed. See [`examples/lit/micro`](examples/lit/micro) for a complete example with layouts, parameterized routes, and a 404 fallback.
+Plain `<a>` tags inside Lit templates are intercepted automatically — no `<Link>` wrapper needed, **provided the host renders in Light DOM** (`createRenderRoot() { return this; }`). Shadow DOM retargets click events to the host, so `<a>` inside a shadow root is invisible to the document-level click handler. See [`examples/lit/micro`](examples/lit/micro) for a complete example with layouts, parameterized routes, and a 404 fallback.
 
 ## Vue 3
 
